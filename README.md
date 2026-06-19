@@ -1,9 +1,11 @@
 # Blazor.DynamicAdmin
 
-Metadata-driven, extensible Dynamic Admin Panel library for Blazor.
+A metadata-driven, extensible admin panel library for Blazor.
 
 ## Architecture
-Follows clean separation: Abstractions → Core → Blazor/UI packages → Providers (EF Core, MudBlazor, etc.).
+- **Abstractions**: Core contracts
+- **Core**: Metadata & configuration
+- **Blazor**: UI components (non-generic)
+- Providers: EF Core, MudBlazor, etc.
 
-## Getting Started
-(TBD)
+See the architecture document for details.
