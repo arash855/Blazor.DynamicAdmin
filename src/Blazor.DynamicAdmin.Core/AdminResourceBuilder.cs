@@ -44,4 +44,9 @@ public sealed class AdminResourceBuilder<TEntity> : IAdminResourceBuilder<TEntit
     public IAdminResourceBuilder<TEntity> Group(string group) => this;
     public IAdminResourceBuilder<TEntity> Icon(string icon) => this;
     public IAdminResourceBuilder<TEntity> Capabilities(AdminCrudCapabilities capabilities) => this;
+
+  public IAdminResourceBuilder<TEntity> PluralDisplayName(string pluralDisplayName)
+  {
+    throw new NotImplementedException();
+  }
 }
