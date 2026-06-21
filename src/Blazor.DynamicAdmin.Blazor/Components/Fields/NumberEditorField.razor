@@ -1,0 +1,26 @@
+@inherits AdminFieldEditorBase
+
+<input class="admin-input" type="number" value="@TextValue" @onchange="OnChanged" />
+
+@code {
+    private string TextValue => Value?.ToString() ?? string.Empty;
+
+    private void OnChanged(ChangeEventArgs args)
+    {
+        var text = args.Value?.ToString();
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            Value = null;
+            return;
+        }
+
+        Value = Field.ValueType switch
+        {
+            Type t when t == typeof(int) || t == typeof(int?) => int.Parse(text),
+            Type t when t == typeof(long) || t == typeof(long?) => long.Parse(text),
+            Type t when t == typeof(decimal) || t == typeof(decimal?) => decimal.Parse(text),
+            Type t when t == typeof(double) || t == typeof(double?) => double.Parse(text),
+            _ => text
+        };
+    }
+}

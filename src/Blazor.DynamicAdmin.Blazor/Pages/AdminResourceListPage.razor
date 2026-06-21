@@ -1,0 +1,123 @@
+@inject IAdminMetadataProvider MetadataProvider
+@inject IAdminAuthorizationService AuthorizationService
+@inject IServiceProvider Services
+
+@if (_resource is null)
+{
+    <p>Resource '@ResourceName' was not found.</p>
+}
+else if (!_isAuthorized)
+{
+    <p>You are not authorized to view this resource.</p>
+}
+else
+{
+    <section class="admin-page">
+        <header class="admin-page-header">
+            <h1>@_resource.PluralDisplayName</h1>
+            @if (_resource.Capabilities.HasFlag(AdminCrudCapabilities.Create))
+            {
+                <button type="button" @onclick="NavigateToCreate">Create</button>
+            }
+        </header>
+
+        <div class="admin-page-toolbar">
+            <input placeholder="Search..." @bind="_search" @bind:event="oninput" @onkeyup="ReloadAsync" />
+        </div>
+
+        <AutoTable Resource="_resource"
+                   Items="_items"
+                   TotalCount="_totalCount"
+                   OnEdit="NavigateToEdit"
+                   OnDelete="DeleteAsync" />
+    </section>
+}
+
+@code {
+    [Parameter] public string ResourceName { get; set; } = string.Empty;
+    [Parameter] public string BasePath { get; set; } = "/admin";
+    [Parameter] public EventCallback<AdminNavigationRequest> OnNavigate { get; set; }
+
+    private AdminResourceDescriptor? _resource;
+    private IReadOnlyList<object> _items = Array.Empty<object>();
+    private long _totalCount;
+    private string _search = string.Empty;
+    private bool _isAuthorized;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _resource = MetadataProvider.FindResource(ResourceName)
+            ?? MetadataProvider.GetResources().FirstOrDefault(r =>
+                string.Equals(r.Route, ResourceName, StringComparison.OrdinalIgnoreCase));
+
+        if (_resource is null)
+            return;
+
+        _isAuthorized = await AuthorizationService.IsGrantedAsync(new AdminAuthorizationContext
+        {
+            Resource = _resource,
+            Operation = AdminOperation.List
+        });
+
+        if (_isAuthorized)
+            await ReloadAsync();
+    }
+
+    private async Task ReloadAsync()
+    {
+        if (_resource?.DataProvider is null)
+            return;
+
+        var result = await _resource.DataProvider.QueryAsync(new AdminQueryContext
+        {
+            Resource = _resource,
+            Query = new AdminQuery { Search = _search },
+            Services = Services
+        });
+
+        _items = result.Items;
+        _totalCount = result.TotalCount;
+    }
+
+    private Task NavigateToCreate() =>
+        OnNavigate.InvokeAsync(new AdminNavigationRequest(_resource!.Route ?? _resource.Name, AdminPageMode.Create));
+
+    private Task NavigateToEdit(object item)
+    {
+        var key = GetKey(item);
+        return key is null
+            ? Task.CompletedTask
+            : OnNavigate.InvokeAsync(new AdminNavigationRequest(_resource!.Route ?? _resource.Name, AdminPageMode.Edit, key));
+    }
+
+    private async Task DeleteAsync(object item)
+    {
+        if (_resource?.DataProvider is null)
+            return;
+
+        var key = GetKey(item);
+        if (key is null)
+            return;
+
+        await _resource.DataProvider.DeleteAsync(new AdminDeleteContext
+        {
+            Resource = _resource,
+            Key = key,
+            Services = Services
+        });
+
+        await ReloadAsync();
+    }
+
+    private object? GetKey(object item)
+    {
+        if (_resource is null)
+            return null;
+
+        var keyField = _resource.Fields.FirstOrDefault(f =>
+            f.PropertyName.Equals("Id", StringComparison.OrdinalIgnoreCase) ||
+            f.PropertyName.EndsWith("Id", StringComparison.Ordinal));
+
+        return keyField?.GetValue?.Invoke(item);
+    }
+}

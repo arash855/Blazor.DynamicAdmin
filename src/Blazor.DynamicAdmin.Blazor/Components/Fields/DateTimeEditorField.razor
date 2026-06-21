@@ -1,0 +1,29 @@
+@inherits AdminFieldEditorBase
+
+<input class="admin-input" type="@InputType" value="@TextValue" @onchange="OnChanged" />
+
+@code {
+    private string InputType => Field.Kind == AdminFieldKind.Date ? "date" : "datetime-local";
+
+    private string TextValue => Value switch
+    {
+        DateTime dt when Field.Kind == AdminFieldKind.Date => dt.ToString("yyyy-MM-dd"),
+        DateTime dt => dt.ToString("yyyy-MM-ddTHH:mm"),
+        DateOnly d => d.ToString("yyyy-MM-dd"),
+        _ => string.Empty
+    };
+
+    private void OnChanged(ChangeEventArgs args)
+    {
+        var text = args.Value?.ToString();
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            Value = null;
+            return;
+        }
+
+        Value = Field.ValueType == typeof(DateOnly) || Field.ValueType == typeof(DateOnly?)
+            ? DateOnly.Parse(text)
+            : DateTime.Parse(text);
+    }
+}

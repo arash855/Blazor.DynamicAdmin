@@ -18,36 +18,39 @@ public sealed class AdminMetadataBuilder
         _accessorFactory = accessorFactory ?? throw new ArgumentNullException(nameof(accessorFactory));
     }
 
-    public AdminResourceDescriptor Build(Type entityType, Action<IAdminResourceBuilder<object>>? configure = null)
+    public AdminResourceDescriptor Build<TEntity>(string? name = null, Action<IAdminResourceBuilder<TEntity>>? configure = null)
+    {
+        var context = CreateContext(typeof(TEntity), name);
+
+        if (configure != null)
+        {
+            var builder = new AdminResourceBuilder<TEntity>(context, _accessorFactory);
+            configure(builder);
+            return builder.Build();
+        }
+
+        return context.ToDescriptor();
+    }
+
+    internal ResourceBuildContext CreateContext(Type entityType, string? name = null)
     {
         ArgumentNullException.ThrowIfNull(entityType);
 
-        // TODO: Convention + Attribute discovery + Fluent override
-        var descriptor = new AdminResourceDescriptor
+        return new ResourceBuildContext
         {
-            Name = entityType.Name,
+            Name = name ?? entityType.Name,
             EntityType = entityType,
             KeyType = FindKeyType(entityType),
-            Fields = BuildFields(entityType).ToList(),
-            // Actions, etc. later
+            DisplayName = entityType.Name,
+            Fields = BuildFields(entityType).ToList()
         };
-
-        // Apply fluent configuration if provided
-        if (configure != null)
-        {
-            var builder = new AdminResourceBuilder<object>(entityType, descriptor, _accessorFactory);
-            configure(builder);
-            // Merge back changes
-        }
-
-        return descriptor;
     }
 
-    private Type? FindKeyType(Type entityType)
+    private static Type? FindKeyType(Type entityType)
     {
-        // Simple convention: property named Id or EntityNameId
-        var keyProp = entityType.GetProperty("Id") ?? 
-                     entityType.GetProperties().FirstOrDefault(p => p.Name.EndsWith("Id"));
+        var keyProp = entityType.GetProperty("Id")
+            ?? entityType.GetProperties().FirstOrDefault(p => p.Name.EndsWith("Id", StringComparison.Ordinal));
+
         return keyProp?.PropertyType;
     }
 
@@ -66,20 +69,24 @@ public sealed class AdminMetadataBuilder
                 Label = prop.Name,
                 Kind = DetermineFieldKind(prop.PropertyType),
                 GetValue = _accessorFactory.CreateGetter(entityType, prop.Name),
-                SetValue = _accessorFactory.CreateSetter(entityType, prop.Name),
-                VisibleInTable = true,
-                VisibleInCreateForm = true,
-                VisibleInEditForm = true
+                SetValue = _accessorFactory.CreateSetter(entityType, prop.Name)
             };
         }
     }
 
     private static AdminFieldKind DetermineFieldKind(Type type)
     {
-        if (type == typeof(bool)) return AdminFieldKind.Boolean;
-        if (type == typeof(DateTime)) return AdminFieldKind.DateTime;
-        if (type == typeof(decimal) || type == typeof(double)) return AdminFieldKind.Currency;
-        // ... more later
+        var underlying = Nullable.GetUnderlyingType(type) ?? type;
+
+        if (underlying == typeof(bool)) return AdminFieldKind.Boolean;
+        if (underlying == typeof(DateTime)) return AdminFieldKind.DateTime;
+        if (underlying == typeof(DateOnly)) return AdminFieldKind.Date;
+        if (underlying.IsEnum) return AdminFieldKind.Enum;
+        if (underlying == typeof(decimal) || underlying == typeof(double) || underlying == typeof(float))
+            return AdminFieldKind.Number;
+        if (underlying == typeof(int) || underlying == typeof(long) || underlying == typeof(short))
+            return AdminFieldKind.Number;
+
         return AdminFieldKind.Text;
     }
 }

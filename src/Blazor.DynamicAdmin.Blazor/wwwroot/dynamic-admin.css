@@ -1,0 +1,52 @@
+.dynamic-admin-root,
+.admin-page {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.admin-page-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.admin-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.admin-table th,
+.admin-table td {
+    border: 1px solid #ddd;
+    padding: 0.5rem 0.75rem;
+    text-align: left;
+}
+
+.admin-table-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.admin-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    margin-bottom: 0.75rem;
+}
+
+.admin-form-actions,
+.admin-page-toolbar {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.admin-input {
+    padding: 0.4rem 0.6rem;
+}
+
+.admin-table-footer {
+    color: #666;
+    font-size: 0.875rem;
+}

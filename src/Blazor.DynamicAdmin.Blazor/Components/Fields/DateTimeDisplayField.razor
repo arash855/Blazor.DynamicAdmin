@@ -1,0 +1,12 @@
+@inherits AdminFieldDisplayBase
+
+<span>@Format(Value)</span>
+
+@code {
+    private static string Format(object? value) => value switch
+    {
+        DateTime dt => dt.ToString("g"),
+        DateOnly d => d.ToString("d"),
+        _ => value?.ToString() ?? string.Empty
+    };
+}

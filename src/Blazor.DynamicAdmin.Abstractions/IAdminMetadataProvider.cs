@@ -9,5 +9,6 @@ namespace Blazor.DynamicAdmin.Abstractions;
 public interface IAdminMetadataProvider
 {
     AdminResourceDescriptor GetResource(Type entityType);
+    AdminResourceDescriptor? FindResource(string name);
     IReadOnlyList<AdminResourceDescriptor> GetResources();
 }

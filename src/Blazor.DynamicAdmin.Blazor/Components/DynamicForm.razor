@@ -1,0 +1,17 @@
+<div class="admin-form">
+    @foreach (var field in FormFields)
+    {
+        <AdminFieldEditor Field="@field" Model="@Model" />
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public AdminResourceDescriptor Resource { get; set; } = default!;
+    [Parameter, EditorRequired] public object Model { get; set; } = default!;
+    [Parameter] public AdminFormMode Mode { get; set; } = AdminFormMode.Create;
+
+    private IEnumerable<AdminFieldDescriptor> FormFields =>
+        Resource.Fields
+            .Where(f => Mode == AdminFormMode.Create ? f.VisibleInCreateForm : f.VisibleInEditForm)
+            .OrderBy(f => f.Order);
+}

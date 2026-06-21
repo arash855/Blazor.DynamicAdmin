@@ -1,0 +1,20 @@
+@inject IAdminFieldComponentResolver FieldComponentResolver
+
+@foreach (var field in Fields)
+{
+    <DynamicComponent Type="@FieldComponentResolver.ResolveDisplayComponent(field)"
+                      Parameters="@CreateParameters(field, Item)" />
+}
+
+@code {
+    [Parameter, EditorRequired] public AdminFieldDescriptor Field { get; set; } = default!;
+    [Parameter, EditorRequired] public object Item { get; set; } = default!;
+
+    private IEnumerable<AdminFieldDescriptor> Fields => [Field];
+
+    private static Dictionary<string, object?> CreateParameters(AdminFieldDescriptor field, object item) => new()
+    {
+        [nameof(AdminFieldDisplayBase.Field)] = field,
+        [nameof(AdminFieldDisplayBase.Item)] = item
+    };
+}

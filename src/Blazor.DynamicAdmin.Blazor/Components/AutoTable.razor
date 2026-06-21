@@ -1,0 +1,81 @@
+@inject IAdminFieldComponentResolver FieldComponentResolver
+
+<div class="admin-table-wrapper">
+    <table class="admin-table">
+        <thead>
+            <tr>
+                @foreach (var field in TableFields)
+                {
+                    <th>@field.Label</th>
+                }
+                @if (ShowActions)
+                {
+                    <th>Actions</th>
+                }
+            </tr>
+        </thead>
+        <tbody>
+            @if (Items.Count == 0)
+            {
+                <tr>
+                    <td colspan="@ColumnCount">No records found.</td>
+                </tr>
+            }
+            else
+            {
+                @foreach (var item in Items)
+                {
+                    <tr>
+                        @foreach (var field in TableFields)
+                        {
+                            <td>
+                                <DynamicComponent Type="@FieldComponentResolver.ResolveDisplayComponent(field)"
+                                                  Parameters="@CreateDisplayParameters(field, item)" />
+                            </td>
+                        }
+                        @if (ShowActions)
+                        {
+                            <td class="admin-table-actions">
+                                @if (OnEdit.HasDelegate && CanEdit)
+                                {
+                                    <button type="button" @onclick="() => OnEdit.InvokeAsync(item)">Edit</button>
+                                }
+                                @if (OnDelete.HasDelegate && CanDelete)
+                                {
+                                    <button type="button" @onclick="() => OnDelete.InvokeAsync(item)">Delete</button>
+                                }
+                            </td>
+                        }
+                    </tr>
+                }
+            }
+        </tbody>
+    </table>
+</div>
+
+@if (TotalCount > Items.Count)
+{
+    <div class="admin-table-footer">Showing @Items.Count of @TotalCount records</div>
+}
+
+@code {
+    [Parameter, EditorRequired] public AdminResourceDescriptor Resource { get; set; } = default!;
+    [Parameter] public IReadOnlyList<object> Items { get; set; } = Array.Empty<object>();
+    [Parameter] public long TotalCount { get; set; }
+    [Parameter] public EventCallback<object> OnEdit { get; set; }
+    [Parameter] public EventCallback<object> OnDelete { get; set; }
+
+    private IEnumerable<AdminFieldDescriptor> TableFields =>
+        Resource.Fields.Where(f => f.VisibleInTable).OrderBy(f => f.Order);
+
+    private bool ShowActions => OnEdit.HasDelegate || OnDelete.HasDelegate;
+    private bool CanEdit => Resource.Capabilities.HasFlag(AdminCrudCapabilities.Edit);
+    private bool CanDelete => Resource.Capabilities.HasFlag(AdminCrudCapabilities.Delete);
+    private int ColumnCount => TableFields.Count() + (ShowActions ? 1 : 0);
+
+    private static Dictionary<string, object?> CreateDisplayParameters(AdminFieldDescriptor field, object item) => new()
+    {
+        [nameof(AdminFieldDisplayBase.Field)] = field,
+        [nameof(AdminFieldDisplayBase.Item)] = item
+    };
+}

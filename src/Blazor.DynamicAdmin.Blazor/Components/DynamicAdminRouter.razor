@@ -1,0 +1,105 @@
+@inject IAdminMetadataProvider MetadataProvider
+@inject NavigationManager Navigation
+
+<section class="dynamic-admin-root">
+    @if (_resource is null)
+    {
+        <p>Select a resource from the admin menu.</p>
+        <ul>
+            @foreach (var resource in MetadataProvider.GetResources())
+            {
+                <li>
+                    <a href="@BuildPath(resource.Route ?? resource.Name)">@resource.PluralDisplayName</a>
+                </li>
+            }
+        </ul>
+    }
+    else if (_mode == AdminPageMode.List)
+    {
+        <AdminResourceListPage ResourceName="@_resourceName"
+                               BasePath="@BasePath"
+                               OnNavigate="HandleNavigate" />
+    }
+    else
+    {
+        <AdminResourceFormPage ResourceName="@_resourceName"
+                               Mode="@_formMode"
+                               Key="@_key"
+                               OnSaved="NavigateToList"
+                               OnCancelled="NavigateToList" />
+    }
+</section>
+
+@code {
+    [Parameter] public string BasePath { get; set; } = "/admin";
+    [Parameter] public string? ResourceName { get; set; }
+    [Parameter] public string? Mode { get; set; }
+    [Parameter] public string? Key { get; set; }
+
+    private string _resourceName = string.Empty;
+    private AdminPageMode _mode = AdminPageMode.List;
+    private AdminFormMode _formMode = AdminFormMode.Create;
+    private object? _key;
+    private AdminResourceDescriptor? _resource;
+
+    protected override void OnParametersSet()
+    {
+        _resourceName = ResourceName ?? string.Empty;
+        _resource = ResolveResource(_resourceName);
+        _mode = ParseMode(Mode);
+        _formMode = _mode == AdminPageMode.Create ? AdminFormMode.Create : AdminFormMode.Edit;
+        _key = ParseKey(_resource, Key);
+    }
+
+    private AdminResourceDescriptor? ResolveResource(string name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+            return null;
+
+        return MetadataProvider.FindResource(name)
+            ?? MetadataProvider.GetResources().FirstOrDefault(r =>
+                string.Equals(r.Route, name, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static AdminPageMode ParseMode(string? mode) => mode?.ToLowerInvariant() switch
+    {
+        "create" => AdminPageMode.Create,
+        "edit" => AdminPageMode.Edit,
+        "details" => AdminPageMode.Details,
+        _ => AdminPageMode.List
+    };
+
+    private static object? ParseKey(AdminResourceDescriptor? resource, string? key)
+    {
+        if (resource?.KeyType is null || string.IsNullOrWhiteSpace(key))
+            return key;
+
+        if (resource.KeyType == typeof(Guid))
+            return Guid.Parse(key);
+
+        if (resource.KeyType == typeof(int))
+            return int.Parse(key);
+
+        if (resource.KeyType == typeof(long))
+            return long.Parse(key);
+
+        return key;
+    }
+
+    private void HandleNavigate(AdminNavigationRequest request)
+    {
+        var path = request.Mode switch
+        {
+            AdminPageMode.Create => $"{BuildPath(request.ResourceName)}/create",
+            AdminPageMode.Edit => $"{BuildPath(request.ResourceName)}/edit/{request.Key}",
+            _ => BuildPath(request.ResourceName)
+        };
+
+        Navigation.NavigateTo(path);
+    }
+
+    private void NavigateToList() => Navigation.NavigateTo(BuildPath(_resourceName));
+
+    private string BuildPath(string resourceName) =>
+        $"{BasePath.TrimEnd('/')}/{resourceName.Trim('/')}";
+}

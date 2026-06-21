@@ -1,0 +1,25 @@
+@inherits AdminFieldEditorBase
+
+<select class="admin-input" value="@CurrentValue" @onchange="OnChanged">
+    @foreach (var name in Enum.GetNames(EffectiveType))
+    {
+        <option value="@name">@name</option>
+    }
+</select>
+
+@code {
+    private Type EffectiveType => Nullable.GetUnderlyingType(Field.ValueType) ?? Field.ValueType;
+    private string CurrentValue => Value?.ToString() ?? string.Empty;
+
+    private void OnChanged(ChangeEventArgs args)
+    {
+        var text = args.Value?.ToString();
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            Value = null;
+            return;
+        }
+
+        Value = Enum.Parse(EffectiveType, text);
+    }
+}

@@ -1,0 +1,107 @@
+@inject IAdminMetadataProvider MetadataProvider
+@inject IAdminAuthorizationService AuthorizationService
+@inject IServiceProvider Services
+
+@if (_resource is null)
+{
+    <p>Resource '@ResourceName' was not found.</p>
+}
+else if (!_isAuthorized)
+{
+    <p>You are not authorized to modify this resource.</p>
+}
+else
+{
+    <section class="admin-page">
+        <header class="admin-page-header">
+            <h1>@(Mode == AdminFormMode.Create ? $"Create {_resource.DisplayName}" : $"Edit {_resource.DisplayName}")</h1>
+        </header>
+
+        @if (_model is not null)
+        {
+            <DynamicForm Resource="_resource" Model="_model" Mode="Mode" />
+
+            <div class="admin-form-actions">
+                <button type="button" @onclick="SaveAsync">Save</button>
+                <button type="button" @onclick="CancelAsync">Cancel</button>
+            </div>
+        }
+    </section>
+}
+
+@code {
+    [Parameter] public string ResourceName { get; set; } = string.Empty;
+    [Parameter] public AdminFormMode Mode { get; set; } = AdminFormMode.Create;
+    [Parameter] public object? Key { get; set; }
+    [Parameter] public EventCallback OnSaved { get; set; }
+    [Parameter] public EventCallback OnCancelled { get; set; }
+
+    private AdminResourceDescriptor? _resource;
+    private object? _model;
+    private bool _isAuthorized;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _resource = MetadataProvider.FindResource(ResourceName)
+            ?? MetadataProvider.GetResources().FirstOrDefault(r =>
+                string.Equals(r.Route, ResourceName, StringComparison.OrdinalIgnoreCase));
+
+        if (_resource is null)
+            return;
+
+        var operation = Mode == AdminFormMode.Create ? AdminOperation.Create : AdminOperation.Edit;
+        _isAuthorized = await AuthorizationService.IsGrantedAsync(new AdminAuthorizationContext
+        {
+            Resource = _resource,
+            Operation = operation
+        });
+
+        if (!_isAuthorized)
+            return;
+
+        if (Mode == AdminFormMode.Create)
+        {
+            _model = Activator.CreateInstance(_resource.EntityType);
+            return;
+        }
+
+        if (Key is null || _resource.DataProvider is null)
+            return;
+
+        _model = await _resource.DataProvider.GetAsync(new AdminGetContext
+        {
+            Resource = _resource,
+            Key = Key,
+            Services = Services
+        });
+    }
+
+    private async Task SaveAsync()
+    {
+        if (_resource?.DataProvider is null || _model is null)
+            return;
+
+        if (Mode == AdminFormMode.Create)
+        {
+            await _resource.DataProvider.CreateAsync(new AdminCreateContext
+            {
+                Resource = _resource,
+                Model = _model,
+                Services = Services
+            });
+        }
+        else
+        {
+            await _resource.DataProvider.UpdateAsync(new AdminUpdateContext
+            {
+                Resource = _resource,
+                Model = _model,
+                Services = Services
+            });
+        }
+
+        await OnSaved.InvokeAsync();
+    }
+
+    private Task CancelAsync() => OnCancelled.InvokeAsync();
+}

@@ -1,0 +1,12 @@
+@inherits AdminFieldDisplayBase
+
+<span>@Format(Value)</span>
+
+@code {
+    private static string Format(object? value) => value switch
+    {
+        null => string.Empty,
+        IFormattable formattable => formattable.ToString(null, System.Globalization.CultureInfo.CurrentCulture) ?? string.Empty,
+        _ => value.ToString() ?? string.Empty
+    };
+}

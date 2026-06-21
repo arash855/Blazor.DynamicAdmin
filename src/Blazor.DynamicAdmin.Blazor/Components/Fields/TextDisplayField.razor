@@ -1,0 +1,7 @@
+@inherits AdminFieldDisplayBase
+
+<span>@Format(Value)</span>
+
+@code {
+    private static string Format(object? value) => value?.ToString() ?? string.Empty;
+}

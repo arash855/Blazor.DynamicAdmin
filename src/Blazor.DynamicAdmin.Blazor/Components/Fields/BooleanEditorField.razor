@@ -1,0 +1,10 @@
+@inherits AdminFieldEditorBase
+
+<input type="checkbox" checked="@(Value is bool b && b)" @onchange="OnChanged" />
+
+@code {
+    private void OnChanged(ChangeEventArgs args)
+    {
+        Value = args.Value is bool b && b;
+    }
+}

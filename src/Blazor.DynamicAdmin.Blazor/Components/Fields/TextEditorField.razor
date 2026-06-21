@@ -1,0 +1,12 @@
+@inherits AdminFieldEditorBase
+
+<input class="admin-input" value="@TextValue" @onchange="OnChanged" />
+
+@code {
+    private string TextValue => Value?.ToString() ?? string.Empty;
+
+    private void OnChanged(ChangeEventArgs args)
+    {
+        Value = args.Value?.ToString();
+    }
+}

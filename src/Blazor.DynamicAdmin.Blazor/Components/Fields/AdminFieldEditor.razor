@@ -1,0 +1,18 @@
+@inject IAdminFieldComponentResolver FieldComponentResolver
+
+<div class="admin-field">
+    <label>@Field.Label</label>
+    <DynamicComponent Type="@FieldComponentResolver.ResolveEditorComponent(Field)"
+                      Parameters="@Parameters" />
+</div>
+
+@code {
+    [Parameter, EditorRequired] public AdminFieldDescriptor Field { get; set; } = default!;
+    [Parameter, EditorRequired] public object Model { get; set; } = default!;
+
+    private Dictionary<string, object?> Parameters => new()
+    {
+        [nameof(AdminFieldEditorBase.Field)] = Field,
+        [nameof(AdminFieldEditorBase.Model)] = Model
+    };
+}
